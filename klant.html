@@ -49,9 +49,16 @@
       font-size: 16px;
       cursor: pointer;
       transition: 0.3s;
+      margin-top: 10px;
     }
     button:hover {
       background-color: #e6c200;
+    }
+    #resultaat {
+      margin-top: 15px;
+      background: #222;
+      padding: 10px;
+      border-radius: 8px;
     }
   </style>
 </head>
@@ -59,12 +66,42 @@
   <div class="container">
     <h1>FA Taxi Service</h1>
     <input type="text" id="ophaaladres" placeholder="Ophaaladres" />
+    <button onclick="haalLocatieOp()">📍 Haal mijn locatie op</button>
     <input type="text" id="afzetadres" placeholder="Afzetadres" />
-    <button onclick="openWhatsApp()">Boek Nu</button>
+    <button onclick="berekenRit()">📊 Bereken Prijs</button>
+    <div id="resultaat"></div>
+    <button onclick="openWhatsApp()">📤 Boek Nu via WhatsApp</button>
   </div>
 
   <script>
-    function openWhatsApp() {
+    const openCageKey = '22f9046cc2b242a3a5f08cfabc005f78';
+    const openRouteKey = '5b3ce3597851110001cf6248b59dc263cab24bdabda48748cd9122b3';
+
+    function haalLocatieOp() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          const url = `https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lon}&key=${openCageKey}`;
+          const res = await fetch(url);
+          const data = await res.json();
+          const adres = data.results[0].formatted;
+          document.getElementById("ophaaladres").value = adres;
+        }, () => alert("Kon locatie niet ophalen."));
+      } else {
+        alert("Geolocatie wordt niet ondersteund door jouw browser.");
+      }
+    }
+
+    async function getCoordinates(adres) {
+      const url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(adres)}&key=${openCageKey}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.results.length) throw new Error("Adres niet gevonden");
+      return [data.results[0].geometry.lng, data.results[0].geometry.lat];
+    }
+
+    async function berekenRit() {
       const ophalen = document.getElementById("ophaaladres").value;
       const afzetten = document.getElementById("afzetadres").value;
 
@@ -73,10 +110,38 @@
         return;
       }
 
-      const message = `📲 Ritverzoek via FA Taxi Service:\n\n📍 Ophaaladres: ${ophalen}\n📍 Afzetadres: ${afzetten}`;
-      const telefoonnummer = "31647972301";
-      const url = `https://wa.me/${telefoonnummer}?text=${encodeURIComponent(message)}`;
+      try {
+        const coordOphalen = await getCoordinates(ophalen);
+        const coordAfzetten = await getCoordinates(afzetten);
+        const routeUrl = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${openRouteKey}&start=${coordOphalen[0]},${coordOphalen[1]}&end=${coordAfzetten[0]},${coordAfzetten[1]}`;
+        const res = await fetch(routeUrl);
+        const data = await res.json();
 
+        const afstandKm = data.features[0].properties.summary.distance / 1000;
+        const duurMin = data.features[0].properties.summary.duration / 60;
+
+        const prijs = 3 + (afstandKm * 2.00) + (duurMin * 0.50); // Starttarief + €2/km + €0,50/min
+
+        document.getElementById("resultaat").innerText =
+          `💶 Prijs: €${prijs.toFixed(2)}\n📏 Afstand: ${afstandKm.toFixed(1)} km\n⏱️ Duur: ${duurMin.toFixed(0)} min`;
+      } catch (e) {
+        alert("Er ging iets mis bij het berekenen.");
+      }
+    }
+
+    function openWhatsApp() {
+      const ophalen = document.getElementById("ophaaladres").value;
+      const afzetten = document.getElementById("afzetadres").value;
+      const info = document.getElementById("resultaat").innerText;
+
+      if (!ophalen || !afzetten || !info) {
+        alert("Vul eerst alle velden in en bereken de rit.");
+        return;
+      }
+
+      const message = `🚖 Ritverzoek FA Taxi Service:\n\n📍 Ophaaladres: ${ophalen}\n📍 Afzetadres: ${afzetten}\n\n${info}`;
+      const whatsappNummer = "31647972301";
+      const url = `https://wa.me/${whatsappNummer}?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank');
     }
   </script>
