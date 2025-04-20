@@ -164,13 +164,13 @@
           }
         }
 
-        let prijsPerKm = 2, prijsPerMin = 0.5, starttarief = 2.50; // Starttarief veranderd naar €2,50
-        if (totaleAfstand <= 3) { prijsPerKm = 3.5; starttarief = 3; }
-        else if (totaleAfstand <= 5) { prijsPerKm = 3; starttarief = 3; }
-        else if (totaleAfstand <= 7) { prijsPerKm = 2.8; starttarief = 2.75; }
-        else if (totaleAfstand <= 10) { prijsPerKm = 2.5; starttarief = 2.5; }
-        else if (totaleAfstand <= 15) { prijsPerKm = 2.3; starttarief = 2.5; }
-        else { prijsPerKm = 2; starttarief = 2.5; }
+        let prijsPerKm = 2, prijsPerMin = 0.5, starttarief = 2.50; // Starttarief overal ingesteld op €2,50
+        if (totaleAfstand <= 3) { prijsPerKm = 3.5; starttarief = 2.50; }
+        else if (totaleAfstand <= 5) { prijsPerKm = 3; starttarief = 2.50; }
+        else if (totaleAfstand <= 7) { prijsPerKm = 2.8; starttarief = 2.50; }
+        else if (totaleAfstand <= 10) { prijsPerKm = 2.5; starttarief = 2.50; }
+        else if (totaleAfstand <= 15) { prijsPerKm = 2.3; starttarief = 2.50; }
+        else { prijsPerKm = 2; starttarief = 2.50; }
 
         let totaal = starttarief + (totaleAfstand * prijsPerKm) + (totaleTijd * prijsPerMin);
         if (tussenstopAantal > 0) totaal += tussenstopAantal * 2; // Deze regel blijft ongewijzigd, maar ongezien voor de klant.
