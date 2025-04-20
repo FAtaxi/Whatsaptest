@@ -51,26 +51,26 @@
       max-width: 400px;
       margin: 10px auto;
     }
-    .locatie-container button {
+    .locatie-container img {
+      cursor: pointer;
+      width: 30px; /* Afmetingen van het icoon aan te passen */
+      height: 30px; /* Afmetingen van het icoon aan te passen */
       margin-left: 5px;
-      padding: 10px;
-      font-size: 16px;
     }
   </style>
 </head>
 <body>
   <h1>FA Taxi Service</h1>
 
-  <!-- Ophaallocatie invoerveld -->
+  <!-- Ophaallocatie invoerveld met knop voor huidige locatie -->
   <div class="locatie-container">
     <input type="text" id="ophaaladres" placeholder="Ophaallocatie">
-    <button onclick="haalOphaallocatieOp()" style="font-size: 16px;">📍</button>
+    <img src="location-icon.png" onclick="haalOphaallocatieOp()" alt="Huidige Locatie" /> <!-- Vervang hier met een eigen locatie-icoon -->
   </div>
 
-  <!-- Afzetlocatie invoerveld -->
+  <!-- Afzetlocatie invoerveld zonder knop voor huidige locatie -->
   <div class="locatie-container">
     <input type="text" id="afzetadres" placeholder="Afzetlocatie">
-    <button onclick="haalLocatieOp()" style="font-size: 16px;">📍</button>
   </div>
 
   <div id="tussenstops"></div>
@@ -108,20 +108,12 @@
       }
     }
 
-    function haalLocatieOp() {
-      const afzet = document.getElementById("afzetadres").value;
-      if (navigator.geolocation && !afzet) {
-        navigator.geolocation.getCurrentPosition(async pos => {
-          const lat = pos.coords.latitude;
-          const lon = pos.coords.longitude;
-          const res = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lon}&key=${openCageKey}`);
-          const data = await res.json();
-          document.getElementById("afzetadres").value = data.results[0].formatted; // Vul het invoerveld met het gevonden afzetadres
-          alert("Live locatie gevonden: " + data.results[0].formatted);
-        });
-      } else {
-        alert("Ophaallocatie is niet ingevuld.");
-      }
+    async function getCoords(adres) {
+      const res = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(adres)}&key=${openCageKey}`);
+      const data = await res.json();
+      if (!data.results.length) throw new Error("Locatie niet gevonden");
+      const { lat, lng } = data.results[0].geometry;
+      return [lng, lat];
     }
 
     function voegTussenstopToe() {
@@ -133,14 +125,6 @@
       input.placeholder = `Tussenstop ${tussenstopAantal}`;
       input.id = `tussenstop${tussenstopAantal}`;
       container.appendChild(input);
-    }
-
-    async function getCoords(adres) {
-      const res = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(adres)}&key=${openCageKey}`);
-      const data = await res.json();
-      if (!data.results.length) throw new Error("Locatie niet gevonden");
-      const { lat, lng } = data.results[0].geometry;
-      return [lng, lat];
     }
 
     async function berekenRit() {
