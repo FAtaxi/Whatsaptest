@@ -3,146 +3,173 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FA Taxi Service - Rit Boeken</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <title>FA Taxi Service</title>
   <style>
     body {
-      font-family: 'Roboto', sans-serif;
+      font-family: 'Segoe UI', sans-serif;
       background-color: #000;
-      color: #fff;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .container {
-      background: #1a1a1a;
-      padding: 30px;
-      border-radius: 15px;
-      box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-      width: 90%;
-      max-width: 500px;
+      color: white;
+      padding: 20px;
+      text-align: center;
     }
     h1 {
       color: red;
-      text-align: center;
       margin-bottom: 20px;
     }
-    input {
-      width: 100%;
+    input, button {
       padding: 12px;
       margin: 10px 0;
       border: none;
       border-radius: 8px;
+      width: 100%;
+      max-width: 400px;
       font-size: 16px;
+    }
+    input {
+      background: #fff;
+      color: #000;
     }
     button {
       background-color: gold;
-      color: #000;
-      font-weight: bold;
-      padding: 12px;
-      border: none;
-      width: 100%;
-      border-radius: 8px;
-      font-size: 16px;
+      color: black;
       cursor: pointer;
-      transition: 0.3s;
-      margin-top: 10px;
+      font-weight: bold;
     }
     button:hover {
-      background-color: #e6c200;
+      background-color: #ffd700;
     }
     #resultaat {
-      margin-top: 15px;
-      background: #222;
-      padding: 10px;
-      border-radius: 8px;
+      margin-top: 20px;
+      background: #111;
+      padding: 20px;
+      border-radius: 10px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>FA Taxi Service</h1>
-    <input type="text" id="ophaaladres" placeholder="Ophaaladres" />
-    <button onclick="haalLocatieOp()">📍 Haal mijn locatie op</button>
-    <input type="text" id="afzetadres" placeholder="Afzetadres" />
-    <button onclick="berekenRit()">📊 Bereken Prijs</button>
-    <div id="resultaat"></div>
-    <button onclick="openWhatsApp()">📤 Boek Nu via WhatsApp</button>
-  </div>
+  <h1>FA Taxi Service</h1>
+
+  <button onclick="haalLocatieOp()">📍 Haal mijn locatie op</button><br>
+  <input type="text" id="afzetadres" placeholder="Afzetlocatie"><br>
+
+  <div id="tussenstops"></div>
+  <button onclick="voegTussenstopToe()">➕ Tussenstop toevoegen (€2 extra)</button><br>
+
+  <button onclick="berekenRit()">Bereken ritprijs</button>
+  <button id="spoedKnop" onclick="spoed = true; berekenRit();">Spoedrit (€5 extra)</button>
+
+  <div id="resultaat"></div>
 
   <script>
-    const openCageKey = '22f9046cc2b242a3a5f08cfabc005f78';
-    const openRouteKey = '5b3ce3597851110001cf6248b59dc263cab24bdabda48748cd9122b3';
+    let startLocatie = '';
+    let spoed = false;
+    let tussenstopAantal = 0;
+    const maxTussenstops = 3;
+
+    const openCageKey = "22f9046cc2b242a3a5f08cfabc005f78";
+    const openRouteKey = "5b3ce3597851110001cf6248b59dc263cab24bdabda48748cd9122b3";
+    const weatherKey = "bd5e378503939ddaee76f12ad7a97608"; // ✅ Jouw ingevoerde API key
 
     function haalLocatieOp() {
       if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(async (pos) => {
+        navigator.geolocation.getCurrentPosition(async pos => {
           const lat = pos.coords.latitude;
           const lon = pos.coords.longitude;
-          const url = `https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lon}&key=${openCageKey}`;
-          const res = await fetch(url);
+          startLocatie = `${lon},${lat}`;
+          const res = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lon}&key=${openCageKey}`);
           const data = await res.json();
-          const adres = data.results[0].formatted;
-          document.getElementById("ophaaladres").value = adres;
-        }, () => alert("Kon locatie niet ophalen."));
+          alert("Live locatie gevonden: " + data.results[0].formatted);
+        });
       } else {
-        alert("Geolocatie wordt niet ondersteund door jouw browser.");
+        alert("Geolocatie wordt niet ondersteund.");
       }
     }
 
-    async function getCoordinates(adres) {
-      const url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(adres)}&key=${openCageKey}`;
-      const res = await fetch(url);
+    function voegTussenstopToe() {
+      if (tussenstopAantal >= maxTussenstops) return alert("Maximaal 3 tussenstops toegestaan.");
+      tussenstopAantal++;
+      const container = document.getElementById("tussenstops");
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = `Tussenstop ${tussenstopAantal}`;
+      input.id = `tussenstop${tussenstopAantal}`;
+      container.appendChild(input);
+    }
+
+    async function getCoords(adres) {
+      const res = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(adres)}&key=${openCageKey}`);
       const data = await res.json();
-      if (!data.results.length) throw new Error("Adres niet gevonden");
-      return [data.results[0].geometry.lng, data.results[0].geometry.lat];
+      if (!data.results.length) throw new Error("Locatie niet gevonden");
+      const { lat, lng } = data.results[0].geometry;
+      return [lng, lat];
     }
 
     async function berekenRit() {
-      const ophalen = document.getElementById("ophaaladres").value;
-      const afzetten = document.getElementById("afzetadres").value;
-
-      if (!ophalen || !afzetten) {
-        alert("Vul beide adressen in.");
-        return;
-      }
+      const afzet = document.getElementById("afzetadres").value;
+      if (!startLocatie || !afzet) return alert("Live locatie en afzetadres verplicht!");
 
       try {
-        const coordOphalen = await getCoordinates(ophalen);
-        const coordAfzetten = await getCoordinates(afzetten);
-        const routeUrl = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${openRouteKey}&start=${coordOphalen[0]},${coordOphalen[1]}&end=${coordAfzetten[0]},${coordAfzetten[1]}`;
-        const res = await fetch(routeUrl);
-        const data = await res.json();
+        let coords = [startLocatie];
 
-        const afstandKm = data.features[0].properties.summary.distance / 1000;
-        const duurMin = data.features[0].properties.summary.duration / 60;
+        for (let i = 1; i <= tussenstopAantal; i++) {
+          const val = document.getElementById(`tussenstop${i}`).value;
+          if (val) {
+            const [lng, lat] = await getCoords(val);
+            coords.push(`${lng},${lat}`);
+          }
+        }
 
-        const prijs = 3 + (afstandKm * 2.00) + (duurMin * 0.50); // Starttarief + €2/km + €0,50/min
+        const eindCoords = await getCoords(afzet);
+        coords.push(`${eindCoords[0]},${eindCoords[1]}`);
 
-        document.getElementById("resultaat").innerText =
-          `💶 Prijs: €${prijs.toFixed(2)}\n📏 Afstand: ${afstandKm.toFixed(1)} km\n⏱️ Duur: ${duurMin.toFixed(0)} min`;
-      } catch (e) {
-        alert("Er ging iets mis bij het berekenen.");
+        let totaleAfstand = 0;
+        let totaleTijd = 0;
+
+        for (let i = 0; i < coords.length - 1; i++) {
+          const [lon1, lat1] = coords[i].split(',');
+          const [lon2, lat2] = coords[i + 1].split(',');
+
+          const route = await fetch(`https://api.openrouteservice.org/v2/directions/driving-car?api_key=${openRouteKey}&start=${lon1},${lat1}&end=${lon2},${lat2}`);
+          const data = await route.json();
+          totaleAfstand += data.features[0].properties.summary.distance / 1000;
+          totaleTijd += data.features[0].properties.summary.duration / 60;
+        }
+
+        let prijsPerKm = 2, prijsPerMin = 0.5, starttarief = 4;
+        if (totaleAfstand <= 3) { prijsPerKm = 3.5; starttarief = 4.5; }
+        else if (totaleAfstand <= 5) { prijsPerKm = 3; starttarief = 4.5; }
+        else if (totaleAfstand <= 7) { prijsPerKm = 2.8; starttarief = 4.5; }
+        else if (totaleAfstand <= 10) { prijsPerKm = 2.5; starttarief = 4.5; }
+        else if (totaleAfstand <= 15) { prijsPerKm = 2.3; starttarief = 4; }
+        else { prijsPerKm = 2; starttarief = 4; }
+
+        let totaal = starttarief + (totaleAfstand * prijsPerKm) + (totaleTijd * prijsPerMin);
+        if (tussenstopAantal > 0) totaal += tussenstopAantal * 2;
+
+        const uur = new Date().getHours();
+        if (uur >= 23 || uur < 7) totaal += 3;
+
+        const [lon, lat] = startLocatie.split(',');
+        const weer = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${weatherKey}`);
+        const weerData = await weer.json();
+        if (weerData.weather[0].main.toLowerCase().includes("rain")) totaal *= 1.2;
+
+        if (spoed) totaal += 5;
+
+        document.getElementById("resultaat").innerHTML = `
+          <h3>✅ Bedankt dat u uw rit heeft geboekt bij FA Taxi Service!</h3>
+          <p>🚖 Ritprijs: €${totaal.toFixed(2)}</p>
+          <p>📍 Afstand: ${totaleAfstand.toFixed(1)} km</p>
+          <p>⏱️ Duur: ${totaleTijd.toFixed(0)} minuten</p>
+          <p>Tot de volgende rit weer!</p>
+        `;
+
+        spoed = false;
+
+      } catch (err) {
+        console.error(err);
+        alert("Fout bij berekenen van rit.");
       }
-    }
-
-    function openWhatsApp() {
-      const ophalen = document.getElementById("ophaaladres").value;
-      const afzetten = document.getElementById("afzetadres").value;
-      const info = document.getElementById("resultaat").innerText;
-
-      if (!ophalen || !afzetten || !info) {
-        alert("Vul eerst alle velden in en bereken de rit.");
-        return;
-      }
-
-      const message = `🚖 Ritverzoek FA Taxi Service:\n\n📍 Ophaaladres: ${ophalen}\n📍 Afzetadres: ${afzetten}\n\n${info}`;
-      const whatsappNummer = "31647972301";
-      const url = `https://wa.me/${whatsappNummer}?text=${encodeURIComponent(message)}`;
-      window.open(url, '_blank');
     }
   </script>
 </body>
