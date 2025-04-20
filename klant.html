@@ -100,6 +100,7 @@
       const res = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(adres)}&key=${openCageKey}`);
       const data = await res.json();
       if (!data.results.length) throw new Error("Locatie niet gevonden");
+
       const { lat, lng } = data.results[0].geometry;
       return [lng, lat];
     }
@@ -131,8 +132,14 @@
 
           const route = await fetch(`https://api.openrouteservice.org/v2/directions/driving-car?api_key=${openRouteKey}&start=${lon1},${lat1}&end=${lon2},${lat2}`);
           const data = await route.json();
-          totaleAfstand += data.features[0].properties.summary.distance / 1000;
-          totaleTijd += data.features[0].properties.summary.duration / 60;
+
+          if (data.features.length > 0) {
+            totaleAfstand += data.features[0].properties.summary.distance / 1000;
+            totaleTijd += data.features[0].properties.summary.duration / 60;
+          } else {
+            console.error(`Geen route gevonden tussen ${coords[i]} en ${coords[i + 1]}`);
+            return alert("Er kon geen route berekend worden. Probeer andere adressen.");
+          }
         }
 
         let prijsPerKm = 2, prijsPerMin = 0.5, starttarief = 4;
@@ -152,7 +159,9 @@
         const [lon, lat] = startLocatie.split(',');
         const weer = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${weatherKey}`);
         const weerData = await weer.json();
-        if (weerData.weather[0].main.toLowerCase().includes("rain")) totaal *= 1.2;
+        if (weerData.weather && weerData.weather.length > 0 && weerData.weather[0].main.toLowerCase().includes("rain")) {
+          totaal *= 1.2;
+        }
 
         if (spoed) totaal += 5;
 
@@ -167,8 +176,8 @@
         spoed = false;
 
       } catch (err) {
-        console.error(err);
-        alert("Fout bij berekenen van rit.");
+        console.error("Fout bij berekenen van rit:", err);
+        alert("Fout bij berekenen van rit. Controleer de invoer en probeer opnieuw.");
       }
     }
   </script>
