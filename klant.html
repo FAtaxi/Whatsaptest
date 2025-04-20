@@ -44,16 +44,30 @@
       padding: 20px;
       border-radius: 10px;
     }
+    .locatie-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      max-width: 400px;
+      margin: 10px auto;
+    }
+    .locatie-container button {
+      margin-left: 5px;
+      padding: 10px;
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
   <h1>FA Taxi Service</h1>
 
-  <button onclick="haalLocatieOp()">📍 Haal mijn locatie op</button><br>
-  <input type="text" id="afzetadres" placeholder="Afzetlocatie"><br>
+  <div class="locatie-container">
+    <input type="text" id="afzetadres" placeholder="Afzetlocatie">
+    <button onclick="haalLocatieOp()" style="font-size: 16px;">📍</button>
+  </div>
 
   <div id="tussenstops"></div>
-  <button onclick="voegTussenstopToe()">➕ Tussenstop toevoegen (€2 extra)</button><br>
+  <button onclick="voegTussenstopToe()">➕ Tussenstop toevoegen</button><br>
 
   <button onclick="berekenRit()">Bereken ritprijs</button>
   <button id="spoedKnop" onclick="spoed = true; berekenRit();">Spoedrit (€5 extra)</button>
@@ -78,6 +92,7 @@
           startLocatie = `${lon},${lat}`;
           const res = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lon}&key=${openCageKey}`);
           const data = await res.json();
+          document.getElementById("afzetadres").value = data.results[0].formatted; // Vul het invoerveld met het gevonden adres
           alert("Live locatie gevonden: " + data.results[0].formatted);
         });
       } else {
@@ -100,7 +115,6 @@
       const res = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(adres)}&key=${openCageKey}`);
       const data = await res.json();
       if (!data.results.length) throw new Error("Locatie niet gevonden");
-
       const { lat, lng } = data.results[0].geometry;
       return [lng, lat];
     }
@@ -132,7 +146,6 @@
 
           const route = await fetch(`https://api.openrouteservice.org/v2/directions/driving-car?api_key=${openRouteKey}&start=${lon1},${lat1}&end=${lon2},${lat2}`);
           const data = await route.json();
-
           if (data.features.length > 0) {
             totaleAfstand += data.features[0].properties.summary.distance / 1000;
             totaleTijd += data.features[0].properties.summary.duration / 60;
@@ -151,7 +164,7 @@
         else { prijsPerKm = 2; starttarief = 4; }
 
         let totaal = starttarief + (totaleAfstand * prijsPerKm) + (totaleTijd * prijsPerMin);
-        if (tussenstopAantal > 0) totaal += tussenstopAantal * 2;
+        if (tussenstopAantal > 0) totaal += tussenstopAantal * 2; // Deze regel blijft ongewijzigd, maar ongezien voor de klant.
 
         const uur = new Date().getHours();
         if (uur >= 23 || uur < 7) totaal += 3;
