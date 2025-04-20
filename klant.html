@@ -61,6 +61,13 @@
 <body>
   <h1>FA Taxi Service</h1>
 
+  <!-- Ophaallocatie invoerveld -->
+  <div class="locatie-container">
+    <input type="text" id="ophaaladres" placeholder="Ophaallocatie">
+    <button onclick="haalOphaallocatieOp()" style="font-size: 16px;">📍</button>
+  </div>
+
+  <!-- Afzetlocatie invoerveld -->
   <div class="locatie-container">
     <input type="text" id="afzetadres" placeholder="Afzetlocatie">
     <button onclick="haalLocatieOp()" style="font-size: 16px;">📍</button>
@@ -76,15 +83,16 @@
 
   <script>
     let startLocatie = '';
+    let eindLocatie = '';
     let spoed = false;
     let tussenstopAantal = 0;
     const maxTussenstops = 3;
 
-    const openCageKey = "22f9046cc2b242a3a5f08cfabc005f78";
-    const openRouteKey = "5b3ce3597851110001cf6248b59dc263cab24bdabda48748cd9122b3";
-    const weatherKey = "bd5e378503939ddaee76f12ad7a97608"; // ✅ Jouw ingevoerde API key
+    const openCageKey = "22f9046cc2b242a3a5f08cfabc005f78"; // Vul hier jouw OpenCage API key in
+    const openRouteKey = "5b3ce3597851110001cf6248b59dc263cab24bdabda48748cd9122b3"; // Vul hier jouw OpenRouteService API key in
+    const weatherKey = "bd5e378503939ddaee76f12ad7a97608"; // Vul hier jouw OpenWeather API key in
 
-    function haalLocatieOp() {
+    function haalOphaallocatieOp() {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(async pos => {
           const lat = pos.coords.latitude;
@@ -92,11 +100,27 @@
           startLocatie = `${lon},${lat}`;
           const res = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lon}&key=${openCageKey}`);
           const data = await res.json();
-          document.getElementById("afzetadres").value = data.results[0].formatted; // Vul het invoerveld met het gevonden adres
+          document.getElementById("ophaaladres").value = data.results[0].formatted; // Vul het invoerveld met het gevonden ophaaladres
           alert("Live locatie gevonden: " + data.results[0].formatted);
         });
       } else {
         alert("Geolocatie wordt niet ondersteund.");
+      }
+    }
+
+    function haalLocatieOp() {
+      const afzet = document.getElementById("afzetadres").value;
+      if (navigator.geolocation && !afzet) {
+        navigator.geolocation.getCurrentPosition(async pos => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          const res = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lon}&key=${openCageKey}`);
+          const data = await res.json();
+          document.getElementById("afzetadres").value = data.results[0].formatted; // Vul het invoerveld met het gevonden afzetadres
+          alert("Live locatie gevonden: " + data.results[0].formatted);
+        });
+      } else {
+        alert("Ophaallocatie is niet ingevuld.");
       }
     }
 
@@ -121,7 +145,7 @@
 
     async function berekenRit() {
       const afzet = document.getElementById("afzetadres").value;
-      if (!startLocatie || !afzet) return alert("Live locatie en afzetadres verplicht!");
+      if (!startLocatie || !afzet) return alert("Ophaallocatie en afzetadres zijn verplicht!");
 
       try {
         let coords = [startLocatie];
